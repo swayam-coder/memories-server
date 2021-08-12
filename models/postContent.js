@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const postContentSchema = mongoose.Schema({
     name: String,
     content: String,
-    creator: String,
+    creator: {
+        type: String,
+        required: true
+    },
     creatorName: String,  // new
     tags: [String],
     selectedFile: String,

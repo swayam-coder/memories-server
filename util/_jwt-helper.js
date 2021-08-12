@@ -1,22 +1,61 @@
-import createError from "http-errors";
-import jwt from "jsonwebtoken"
+const createError = require("http-errors");
+const jwt = require("jsonwebtoken");
 
 const generateAccessToken = (user) => {
-    try {
-        const AccessToken = jwt.sign({ email: user.email, id: user._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h", issuer: "memories.com", audience: user._id });
-        return AccessToken;
-    } catch (error) {
-        next(createError.InternalServerError())
+    const options = {
+        expiresIn: "1h", 
+        issuer: "memories.com", 
     }
+
+    const userinfo = {
+        email: user.email, 
+        id: user._id
+    }
+
+    return new Promise((resolve, reject) => {
+        jwt.sign(userinfo, process.env.ACCESS_TOKEN_SECRET, options, (err, info) => {
+            if(err) {
+                console.log(err);
+                reject(createError.InternalServerError())
+                return
+            }
+            resolve(info)
+        });
+    }) 
 }
 
 const generateRefreshToken = (user) => {
-    try {
-        const RefreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "1y", issuer: "memories.com", audience: user._id });
-        return RefreshToken;
-    } catch (error) {
-        next(createError.InternalServerError())
+    const options = {
+        expiresIn: "1y", 
+        issuer: "memories.com",
     }
+
+    const userinfo = {
+        email: user.email, 
+        id: user._id
+    }
+
+    return new Promise((resolve, reject) => {
+        jwt.sign(userinfo, process.env.REFRESH_TOKEN_SECRET, options, (err, info) => {
+            if(err) {
+                console.log(err);
+                reject(createError.InternalServerError())
+                return
+            }
+            resolve(info)
+        });
+    }) 
 }
 
-module.exports = { generateAccessToken, generateRefreshToken }
+const verifyRefreshToken = async (token) => {
+    return new Promise((resolve, reject) => {
+        jwt.verify(token, process.env.REFRESH_TOKEN_SECRET, async (err, info) => {
+            if(err){
+                reject(err)
+            }
+            resolve(info)
+        })
+    })
+}
+
+module.exports = { generateAccessToken, generateRefreshToken, verifyRefreshToken }

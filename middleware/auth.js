@@ -1,38 +1,45 @@
 const jwt = require("jsonwebtoken");
 const createErrors = require("http-errors");
 
-const secret = process.env.ACCESS_TOKEN_SECRET;
-
 const auth = async (req, res, next) => {
   try {
-    // if(!req.headers.authorization) return 
+    if(!req.headers.authorization) {
+      console.log("header is empty");
+      return
+    }
 
     const Accesstoken = req.headers.authorization.split(" ")[1];
-    const isCustomAuth = token.length < 500;  // if length is less than 500 then token is custom
+    const isCustomAuth = Accesstoken.length < 500;  // if length is less than 500 then token is custom
 
     let decodedData;
 
-    if (token && isCustomAuth) {      // if the token is custom token
-      jwt.verify(Accesstoken, secret, (err, payload) => {
+    if (Accesstoken && isCustomAuth) {      // if the token is custom token
+      jwt.verify(Accesstoken, process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
         if(err) {
           const errormsg = (err.name === "JsonWebTokenError") ? "Unauthorized User" : err.message;
-          next(createErrors.Unauthorized(errormsg))  // if token would have expired
+          throw createErrors.Unauthorized(errormsg)  // if token would have expired
         }
         req.userId = payload.id;
-        next();
       })
+
+      if(req.userId) {
+        next()
+      }
     } else {                          // if the token is oauth token
       jwt.decode(Accesstoken, (err, payload) => {
         if(err) {
           const errormsg = (err.name === "JsonWebTokenError") ? "Unauthorized User" : err.message;
-          next(createErrors.Unauthorized(errormsg));
+          throw createErrors.Unauthorized(errormsg);
         }
         req.userId = payload.sub;
-        next();
       })
+
+      if(req.userId) {
+        next();
+      }
     }
   } catch (error) {
-    console.log(error);
+      console.log(error);
   }
 };
 
