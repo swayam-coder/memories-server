@@ -1,7 +1,9 @@
 const userInfo = require('../models/user');
 const bcrypt = require("bcrypt");
 const createError = require("http-errors");
-const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require("../util/_jwt-helper");
+const { generateAccessToken, generateRefreshToken, verifyRefreshToken, generateEmailToken, verifyEmailToken } = require("../util/_jwt-helper");
+const { sendEmail } = require("../util/_sendemail");
+const mongoose = require("mongoose")
 
 const login = async (req, res, next) => {
     const { email, password } = req.body;
@@ -78,5 +80,67 @@ const verifyToken = async (req, res, next) => {
     }
 }
 
-module.exports = {login, register, verifyToken }
+const confirmPassword = async (req, res, next) => {
+    const { password } = req.body
+    try {
+        const user = await userInfo.findOne({ _id: req.userId }).select('password email')
+        const check = await bcrypt.compare(password, user.password)
+
+        if(!check)
+            next(createError.Unauthorized("Wrong password entered"))
+
+        const token = await generateEmailToken(user)
+        const url = `${req.headers.origin}/password-reset/${user._id}/${token}`  // doubt
+        console.log(url);
+        await sendEmail(user.email, url)
+
+        res.json({ sentEmail: true, url: `/password-reset/${user._id}/${token}` })
+    } catch (error) {
+        console.log(error);
+        next(error)
+    }
+}
+
+const passwordTokenVerify = async (req, res, next) => {
+    try {
+        const { id, token } = req.body
+        
+        await verifyEmailToken(token);
+
+        if (!mongoose.Types.ObjectId.isValid(id)) throw createError.InternalServerError("Page not found")
+    
+        const idVerify = id === req.userId
+
+        if(!idVerify) res.json({ urlStatus: "verified" })
+    } catch (error) {
+        next(error)
+    }
+}
+
+const changePassword = async (req, res, next) => {
+    try {
+        const { email, newpassword, oldpassword } = req.body;
+        const user = await userInfo.find({_id: req.userId}).select('email password')
+
+        const passwordcheck = await bcrypt.compare(oldpassword, user.password)
+
+        if(user.email !== email)
+            throw createError.Unauthorized("email entered is not registered")
+
+        if(!passwordcheck)
+            throw createError.Unauthorized("Wrong password entered")
+    
+        const hashedNewPassword = await bcrypt.hash(newpassword, 12);
+        
+        await userInfo.findByIdAndUpdate(req.userId, { password: hashedNewPassword })
+        
+        res.json({ updated: true })
+    } catch (error) {
+        console.log(error);
+        next(error)
+    }
+    
+}
+
+module.exports = {login, register, verifyToken, confirmPassword, changePassword, passwordTokenVerify}
 

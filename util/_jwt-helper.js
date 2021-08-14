@@ -58,4 +58,38 @@ const verifyRefreshToken = async (token) => {
     })
 }
 
-module.exports = { generateAccessToken, generateRefreshToken, verifyRefreshToken }
+const generateEmailToken = (user) => {
+    const options = {
+        expiresIn: "15m", 
+        issuer: "memories.com", 
+    }
+
+    const userinfo = {
+        email: user.email, 
+        id: user._id
+    }
+
+    return new Promise((resolve, reject) => {
+        jwt.sign(userinfo, process.env.EMAIL_TOKEN_SECRET, options, (err, info) => {
+            if(err) {
+                console.log(err);
+                reject(createError.InternalServerError())
+                return
+            }
+            resolve(info)
+        });
+    }) 
+}
+
+const verifyEmailToken = async (token) => {
+    return new Promise((resolve, reject) => {
+        jwt.verify(token, process.env.EMAIL_TOKEN_SECRET, async (err, info) => {
+            if(err){
+                reject(err)
+            }
+            resolve(info)
+        })
+    })
+}
+
+module.exports = { generateAccessToken, generateRefreshToken, verifyRefreshToken, generateEmailToken, verifyEmailToken }

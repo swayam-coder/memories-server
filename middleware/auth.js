@@ -14,32 +14,25 @@ const auth = async (req, res, next) => {
     let decodedData;
 
     if (Accesstoken && isCustomAuth) {      // if the token is custom token
-      jwt.verify(Accesstoken, process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
-        if(err) {
-          const errormsg = (err.name === "JsonWebTokenError") ? "Unauthorized User" : err.message;
-          throw createErrors.Unauthorized(errormsg)  // if token would have expired
-        }
-        req.userId = payload.id;
-      })
+      const payload = jwt.verify(Accesstoken, process.env.ACCESS_TOKEN_SECRET)
 
+      req.userId = payload.id;
+      
       if(req.userId) {
         next()
       }
     } else {                          // if the token is oauth token
-      jwt.decode(Accesstoken, (err, payload) => {
-        if(err) {
-          const errormsg = (err.name === "JsonWebTokenError") ? "Unauthorized User" : err.message;
-          throw createErrors.Unauthorized(errormsg);
-        }
-        req.userId = payload.sub;
-      })
+      const payload = jwt.decode(Accesstoken)
+
+      req.userId = payload.sub;
 
       if(req.userId) {
         next();
       }
     }
-  } catch (error) {
-      console.log(error);
+  } catch (err) {
+      const errormsg = (err.name === "JsonWebTokenError") ? "Unauthorized User" : err.message;
+      next(createErrors.Unauthorized(errormsg))  // if token would have expired
   }
 };
 
