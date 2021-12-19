@@ -40,7 +40,7 @@ $ npm install
 ```
 ### 3. Setup MongoDB Atlas Database
 ```sh
-$ Set up a mongodb database according to the given schema definition in the project.
+Set up a mongodb database according to the given schema definition in the project.
 ```
 ### 4. Run locally
 ```sh
